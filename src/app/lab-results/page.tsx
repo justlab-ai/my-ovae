@@ -490,7 +490,9 @@ export default function LabResultsPage() {
     const [analysisResult, setAnalysisResult] = useState<LabResultAnalysisOutput | null>(null);
     const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
 
-    const { labResults, areLabResultsLoading, symptoms, cycles } = useUserHealthData();
+    const { cycles, recentSymptoms: symptoms } = useUserHealthData();
+const labResults = [];
+const areLabResultsLoading = false;
 
     const handleFormSubmit = useCallback(() => {
         setFormKey(prev => prev + 1)
