@@ -14,7 +14,7 @@ import { identifyPcosSubtype, PcosSubtypeOutput } from "@/ai/flows/ai-pcos-subty
 import { predictCycleEvents, CyclePredictorOutput } from "@/ai/flows/ai-cycle-predictor";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis, Area, AreaChart, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as RechartsRadar } from 'recharts';
+import { Bar, BarChart, Cell, CartesianGrid, Legend, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis, Area, AreaChart, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as RechartsRadar } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -567,7 +567,7 @@ const ComparativeAnalytics = () => {
                             <Legend />
                             <Bar dataKey="days" layout="vertical" radius={5} >
                                  {chartData.map((entry, index) => (
-                                    <Bar key={`cell-${index}`} fill={entry.name === 'Your Average' ? 'hsl(var(--primary))' : 'hsl(var(--muted))'} />
+                                    <Cell key={`cell-${index}`} fill={entry.name === 'Your Average' ? 'hsl(var(--primary))' : 'hsl(var(--muted))'} />
                                 ))}
                             </Bar>
                         </BarChart>
