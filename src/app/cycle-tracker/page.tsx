@@ -271,7 +271,7 @@ export default function CycleTrackerPage() {
     
     const dates: Date[] = [];
 if (Array.isArray(historicalPeriodLogs)) {
- (historicalPeriodLogs || []).forEach(log => {
+ (historicalPeriodLogs as any[]).forEach(log => {
     const logDate = (log.date as any)?.toDate();
     if (logDate && log.flow && log.flow !== 'none') {
       dates.push(logDate);
