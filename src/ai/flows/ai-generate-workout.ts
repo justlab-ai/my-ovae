@@ -76,7 +76,7 @@ const generateWorkoutFlow = ai.defineFlow(
   async (input) => {
     // Make sure to pass the userId to the prompt so it can be used by the tool.
     const { output } = await prompt(input, {
-        userId: input.userId,
+     
     });
     return output!;
   }
