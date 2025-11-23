@@ -158,7 +158,7 @@ const generateCoachingTipFlow = ai.defineFlow(
     // Pass the user ID from the main input to the tool-calling prompt.
     // The prompt will then pass this ID to any tools it decides to call.
     const { output } = await prompt(input, {
-        userId: input.userId
+       
     });
     return output!;
   }
