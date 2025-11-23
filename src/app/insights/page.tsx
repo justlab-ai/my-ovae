@@ -287,7 +287,7 @@ const PcosPhenotypeMap = ({ scores }: { scores: PcosSubtypeOutput['phenotypeScor
                                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.1} />
                                  </radialGradient>
                              </defs>
-                             <CartesianGrid gridType="circle" />
+                            
                              <PolarGrid />
                              <PolarAngleAxis dataKey="subject" />
                              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
