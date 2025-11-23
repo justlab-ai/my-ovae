@@ -596,7 +596,7 @@ const SubtypeEvolutionTracker = () => {
         if (!analyses) return [];
         return analyses.map(analysis => {
             if (!analysis.phenotypeScores) return { date: format((analysis.analysisDate as any).toDate(), 'MMM d'), value: 0 };
-            const topScore = Math.max(...Object.values(analysis.phenotypeScores));
+            const topScore = Math.max(...Object.values(analysis.phenotypeScores) as number[]);
             return {
                 date: format((analysis.analysisDate as any).toDate(), 'MMM d'),
                 value: topScore,
