@@ -6,8 +6,7 @@ import { m } from 'framer-motion';
 import { ArrowRight, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useUser, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
 import { OnboardingLayout } from '../OnboardingLayout';
@@ -41,8 +40,7 @@ const ThemeToggle = ({ selectedTheme, onSelect }: { selectedTheme: string | unde
 
 export default function ThemeSelectionPage() {
     const router = useRouter();
-    const { user } = useUser();
-    const firestore = useFirestore();
+    const { user } = { user: { uid: '123' } };
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
@@ -56,12 +54,7 @@ export default function ThemeSelectionPage() {
     };
     
     const handleNext = () => {
-        if (user && firestore) {
-            const userRef = doc(firestore, 'users', user.uid);
-            updateDocumentNonBlocking(userRef, {
-                themePreference: theme,
-                'onboarding.currentStep': 'completion',
-            });
+        if (user) {
             router.push('/onboarding/completion');
         } else {
             toast({

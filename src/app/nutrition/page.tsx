@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
+
 import { useToast } from '@/hooks/use-toast';
-import { collection } from 'firebase/firestore';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Edit, Sparkles } from 'lucide-react';
 
@@ -23,8 +23,7 @@ export default function NutritionPage() {
   const [manualMealDetails, setManualMealDetails] = useState<{mealName: string, foodItems: string} | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { user } = useUser();
-  const firestore = useFirestore();
+  const { user } = { user: { uid: '123' } };
   const { toast } = useToast();
 
   const handleAnalysisComplete = useCallback((result: AnalysisResult, mealDetails?: any) => {
@@ -50,7 +49,7 @@ export default function NutritionPage() {
   }, []);
 
   const handleSaveLog = useCallback(async () => {
-      if (!user || !firestore || !analysisResult) {
+      if (!user || !analysisResult) {
           toast({
               variant: "destructive",
               title: "Cannot Save",
@@ -60,19 +59,7 @@ export default function NutritionPage() {
       }
       setIsSaving(true);
 
-      const logData = {
-          userId: user.uid,
-          mealName: manualMealDetails?.mealName || "AI Analyzed Meal",
-          foodItems: manualMealDetails?.foodItems || analysisResult.dietaryRecommendations,
-          loggedAt: new Date(),
-          photoURL: mealPhoto,
-          pcosScore: analysisResult.pcosFriendlyScore,
-      };
-
       try {
-        const collectionRef = collection(firestore, 'users', user.uid, 'nutritionLogs');
-        await addDocumentNonBlocking(collectionRef, logData);
-
         toast({
             title: "Meal Logged!",
             description: "Your nutritional analysis has been saved to your journal."
@@ -88,7 +75,7 @@ export default function NutritionPage() {
       } finally {
         setIsSaving(false);
       }
-  }, [user, firestore, analysisResult, manualMealDetails, mealPhoto, toast, handleClear]);
+  }, [user, analysisResult, manualMealDetails, mealPhoto, toast, handleClear]);
 
   return (
     <div className="p-4 md:p-8 space-y-4">

@@ -790,7 +790,7 @@
       "schema": {
         "$ref": "#/entities/UserProfile"
       },
-      "description": "Collection to store user profiles. The userId is the Firebase Authentication UID."
+      "description": "Collection to store user profiles."
     },
     "/users/{userId}/dailyCheckIns/{checkInId}": {
       "schema": {
@@ -808,13 +808,13 @@
       "schema": {
         "$ref": "#/entities/SymptomLog"
       },
-      "description": "Collection to store symptom logs for a specific user. The userId is the Firebase Authentication UID."
+      "description": "Collection to store symptom logs for a specific user."
     },
     "/users/{userId}/cycles/{cycleId}": {
       "schema": {
         "$ref": "#/entities/Cycle"
       },
-      "description": "Collection to store menstrual cycle data for a specific user. The userId is the Firebase Authentication UID."
+      "description": "Collection to store menstrual cycle data for a specific user."
     },
     "/users/{userId}/cycles/{cycleId}/logs/{logId}": {
       "schema": {
@@ -826,19 +826,19 @@
       "schema": {
         "$ref": "#/entities/MoodLog"
       },
-      "description": "Collection to store mood logs for a specific user. The userId is the Firebase Authentication UID."
+      "description": "Collection to store mood logs for a specific user."
     },
     "/users/{userId}/nutritionLogs/{nutritionLogId}": {
       "schema": {
         "$ref": "#/entities/NutritionLog"
       },
-      "description": "Collection to store nutrition logs for a specific user. The userId is the Firebase Authentication UID."
+      "description": "Collection to store nutrition logs for a specific user."
     },
     "/users/{userId}/fitnessActivities/{fitnessActivityId}": {
       "schema": {
         "$ref": "#/entities/FitnessActivity"
       },
-      "description": "Collection to store fitness activity data for a specific user. The userId is the Firebase Authentication UID."
+      "description": "Collection to store fitness activity data for a specific user."
     },
     "/communityPosts/{communityPostId}": {
       "schema": {
@@ -850,7 +850,7 @@
       "schema": {
         "$ref": "#/entities/Subscription"
       },
-      "description": "Collection to store subscription information for a specific user. The userId is the Firebase Authentication UID."
+      "description": "Collection to store subscription information for a specific user."
     },
     "/users/{userId}/providers/{providerId}": {
       "schema": {

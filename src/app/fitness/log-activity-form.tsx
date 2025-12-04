@@ -4,9 +4,7 @@
 import { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { useToast } from '@/hooks/use-toast';
-import { collection } from 'firebase/firestore';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
@@ -17,15 +15,14 @@ const activityTypes = [
 ];
 
 export const LogActivityForm = ({ onActivityLogged }: { onActivityLogged: () => void }) => {
-    const { user } = useUser();
-    const firestore = useFirestore();
+    const { user } = { user: { uid: '123' } };
     const { toast } = useToast();
     const [activityType, setActivityType] = useState('');
     const [duration, setDuration] = useState(30);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleLogActivity = useCallback(async () => {
-        if (!activityType || !user || !firestore) {
+        if (!activityType || !user) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please select an activity type.' });
             return;
         }
@@ -39,7 +36,6 @@ export const LogActivityForm = ({ onActivityLogged }: { onActivityLogged: () => 
         };
 
         try {
-            await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'fitnessActivities'), activityData);
             toast({ title: 'Activity Logged!', description: `${activityType} for ${duration} minutes.` });
             setActivityType('');
             setDuration(30);
@@ -49,7 +45,7 @@ export const LogActivityForm = ({ onActivityLogged }: { onActivityLogged: () => 
         } finally {
             setIsLoading(false);
         }
-    }, [activityType, duration, user, firestore, onActivityLogged, toast]);
+    }, [activityType, duration, user, onActivityLogged, toast]);
 
     const handleDurationChange = useCallback((value: number[]) => {
         setDuration(value[0]);

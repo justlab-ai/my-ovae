@@ -8,7 +8,7 @@ import { ArrowLeft, Moon, LogOut, Settings, LifeBuoy, CircleUser } from 'lucide-
 import { DockProvider, Dock, dockItems } from '@/components/navigation/Dock';
 import { Button } from '@/components/ui/button';
 import { ErrorBoundary } from 'react-error-boundary';
-import { useAuth, useUser } from '@/firebase';
+
 import { useTheme } from 'next-themes';
 import { Skeleton } from '../ui/skeleton';
 import Link from 'next/link';
@@ -65,9 +65,13 @@ const NavErrorFallback = () => (
 );
 
 const UserMenu = () => {
-    const { user, isUserLoading } = useUser();
+    const { user, isUserLoading } = { user: {
+        displayName: "John Doe",
+        email: "john.doe@example.com",
+        photoURL: "https://randomuser.me/api/portraits/men/32.jpg",
+        uid: "123"
+    }, isUserLoading: false };
     const { theme, setTheme } = useTheme();
-    const auth = useAuth();
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
 
@@ -76,10 +80,7 @@ const UserMenu = () => {
     }, []);
     
     const handleLogout = async () => {
-        if (auth) {
-            await auth.signOut();
-            router.push('/login');
-        }
+        router.push('/login');
     };
 
     if (!mounted || isUserLoading) {

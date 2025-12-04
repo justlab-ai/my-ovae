@@ -7,8 +7,7 @@ import { ArrowRight } from 'lucide-react';
 import { LivingBackground } from '@/components/living-background';
 import { AnimatePresence, m } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -59,8 +58,7 @@ const NameInput = ({ initialName = '', onNameChange }: { initialName?: string, o
 
 export default function WelcomePage() {
   const router = useRouter();
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
+  const { user, isUserLoading } = { user: { uid: '123', displayName: 'Jane' }, isUserLoading: false };
   const [name, setName] = useState('');
   const [showContent, setShowContent] = useState(false);
   const { toast } = useToast();
@@ -80,21 +78,8 @@ export default function WelcomePage() {
 
 
   const handleContinue = async () => {
-    if (user && firestore) {
-        const userRef = doc(firestore, 'users', user.uid);
-        const publicUserRef = doc(firestore, 'publicUserProfiles', user.uid);
-
-        const userData = {
-            displayName: name,
-            'onboarding.currentStep': 'journey-status',
-        };
-        const publicUserData = { displayName: name, id: user.uid };
-        
+    if (user) {
         try {
-            await Promise.all([
-                setDocumentNonBlocking(userRef, userData, { merge: true }),
-                setDocumentNonBlocking(publicUserRef, publicUserData, { merge: true })
-            ]);
             router.push('/onboarding/journey-status');
         } catch(e) {
              toast({

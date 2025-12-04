@@ -12,8 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { useFirestore, useUser, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+
 import { useToast } from '@/hooks/use-toast';
 
 const bodyZones = [
@@ -164,8 +163,7 @@ const SymptomSelectorDialog = ({ zone, open, onOpenChange, onSave, savedSymptoms
 
 export default function BodyMappingPage() {
   const router = useRouter();
-  const { user } = useUser();
-  const firestore = useFirestore();
+  const { user } = { user: { uid: '123' } };
   const { toast } = useToast();
   const [selectedZone, setSelectedZone] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -184,12 +182,7 @@ export default function BodyMappingPage() {
   const totalSymptoms = Object.values(mappedSymptoms).reduce((acc, zone) => acc + Object.keys(zone).length, 0);
 
   const handleNext = () => {
-    if (user && firestore) {
-        const userRef = doc(firestore, 'users', user.uid);
-        updateDocumentNonBlocking(userRef, {
-            'onboarding.symptoms': mappedSymptoms,
-            'onboarding.currentStep': 'notifications',
-        });
+    if (user) {
         router.push('/onboarding/notifications');
     } else {
          toast({

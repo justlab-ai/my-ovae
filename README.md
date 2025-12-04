@@ -4,7 +4,7 @@
 ## Description
 MyOvae is a next-generation wellness companion designed to help individuals navigate their Polycystic Ovary Syndrome (PCOS) journey with confidence and clarity. The application leverages AI-powered insights, data-driven analytics, and a supportive community to provide a personalized experience for managing symptoms, tracking cycles, and improving overall well-being.
 
-This project is built with Next.js, TypeScript, Tailwind CSS, ShadCN for UI components, and Firebase for backend services.
+This project is built with Next.js, TypeScript, Tailwind CSS, and ShadCN for UI components.
 
 ## Features
 - **AI-Powered Insights**: Get personalized coaching, symptom predictions, and nutritional analysis from our intelligent assistant, Ovie.
@@ -32,14 +32,7 @@ To get this project running locally, follow these steps:
     ```
 
 3.  **Set up Environment Variables:**
-    Create a `.env.local` file in the root of the project and add your Firebase project credentials. You can get these from your Firebase project settings.
-    ```
-    NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
-    NEXT_PUBLIC_FIREBASE_APP_ID=...
-    NEXT_PUBLIC_FIREBASE_API_KEY=...
-    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
-    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-    ```
+    
 
 4.  **Run the development server:**
     ```bash

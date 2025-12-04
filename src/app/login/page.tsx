@@ -9,17 +9,7 @@ import { Logo } from "@/components/logo";
 import React, { useEffect, useState } from "react";
 import { LivingBackground } from "@/components/living-background";
 import { m } from 'framer-motion';
-import { useAuth, useUser, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
-import { 
-  Auth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup,
-  type User as FirebaseUser,
-} from "firebase/auth";
-import { doc, getDoc, serverTimestamp } from "firebase/firestore";
-import { useFirestore }from "@/firebase";
+// [TODO] Implement authentication without Firebase
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -50,122 +40,6 @@ const GoogleIcon = () => (
 );
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const auth = useAuth();
-  const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
-  const router = useRouter();
-  const { toast } = useToast();
-  const { setTheme } = useTheme();
-
-  useEffect(() => {
-    const handleSuccessfulLogin = async (firebaseUser: FirebaseUser) => {
-        if (!firestore) return;
-        const userRef = doc(firestore, 'users', firebaseUser.uid);
-        
-        try {
-            const userDoc = await getDoc(userRef);
-
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                updateDocumentNonBlocking(userRef, { lastLogin: serverTimestamp() });
-                
-                if (userData?.themePreference) {
-                  setTheme(userData.themePreference);
-                }
-                
-                if (userData?.onboardingCompleted) {
-                    router.push('/dashboard');
-                } else {
-                    router.push('/onboarding/welcome');
-                }
-            } else {
-                const newUserDoc = {
-                    id: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    displayName: firebaseUser.displayName || '',
-                    photoURL: firebaseUser.photoURL,
-                    createdAt: serverTimestamp(),
-                    lastLogin: serverTimestamp(),
-                    onboardingCompleted: false,
-                    themePreference: 'dark'
-                };
-                await setDocumentNonBlocking(userRef, newUserDoc);
-                const publicUserRef = doc(firestore, 'publicUserProfiles', firebaseUser.uid);
-                await setDocumentNonBlocking(publicUserRef, {
-                    id: firebaseUser.uid,
-                    displayName: firebaseUser.displayName || 'Anonymous',
-                    photoURL: firebaseUser.photoURL,
-                });
-                setTheme('dark');
-                router.push('/onboarding/welcome');
-            }
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Login Error",
-                description: "Could not process your user profile. Please try again.",
-            });
-            setIsAuthLoading(false);
-        }
-      };
-
-    if (!isUserLoading && user) {
-        handleSuccessfulLogin(user);
-    }
-  }, [user, isUserLoading, firestore, router, setTheme, toast]);
-
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!auth) return;
-    setIsAuthLoading(true);
-    try {
-      if (mode === 'signup') {
-        await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-      }
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Failed",
-        description: error.message || "An error occurred. Please try again.",
-      });
-      setIsAuthLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    if (!auth) return;
-    setIsAuthLoading(true);
-    const provider = new GoogleAuthProvider();
-    try {
-        await signInWithPopup(auth, provider);
-    } catch (error: any) {
-        toast({
-            variant: "destructive",
-            title: "Google Sign-In Failed",
-            description: error.message || "Could not sign in with Google. Please try again.",
-        });
-        setIsAuthLoading(false);
-    }
-  };
-
-  if (isUserLoading || user) {
-      return (
-        <div className="relative flex flex-col items-center justify-center min-h-screen p-4 overflow-hidden bg-background">
-            <LivingBackground />
-            <div className="z-10 flex flex-col items-center gap-4">
-              <Skeleton className="size-16 rounded-full" />
-              <p className="text-muted-foreground">Loading Your Wellness Journey...</p>
-            </div>
-        </div>
-    );
-  }
-
   return (
     <main className="relative flex items-center justify-center min-h-screen p-4 overflow-hidden bg-background">
       <LivingBackground />
@@ -184,79 +58,10 @@ export default function LoginPage() {
           </p>
 
           <div className="w-full space-y-3 mb-6">
-            <Button variant="outline" className="w-full animate-biopulse-resting" onClick={handleGoogleSignIn} disabled={isAuthLoading}>
-              <GoogleIcon />
-              Continue with Google
-            </Button>
-            <Button variant="outline" className="w-full animate-biopulse-resting cursor-not-allowed" disabled={true}>
-              <svg className="size-5" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M19.33 13.06c-.32.08-.72.2-.95.18c-.23-.02-.63-.17-.93-.17c-1.33 0-2.23.86-3.13.86c-.88 0-1.6-.81-2.93-.81c-1.35 0-2.43.86-3.3.86c-.9 0-1.7-.83-2.98-.83c-.75 0-1.38.33-1.93.73c-1.2.93-1.6 2.5-1.05 4.58c.53 2.1 1.63 3.88 2.93 3.88c.85 0 1.3-.53 2.45-.53c1.13 0 1.5.53 2.5.53c1.23 0 1.83-.9 3.03-.9c1.18 0 1.65.9 2.95.9c1.23 0 1.93-.95 2.58-2.15c-1.18-.73-2.03-2.13-2.03-3.63c0-1.2.6-2.08 1.43-2.58c.25-.15.5-.3.78-.4zM16.9 3.3c.98 0 1.95.53 2.55 1.33c-.93.63-1.95 1.05-3.1 1.05c-.95 0-1.93-.43-2.65-1.13c.98-.78 2.1-.98 3.2-.25z"
-                />
-              </svg>
-              Continue with Apple
-            </Button>
+            <p className="text-muted-foreground">
+              Login is temporarily disabled while we upgrade our systems.
+            </p>
           </div>
-          
-          <div className="flex items-center w-full my-4">
-            <Separator className="flex-1 bg-border" />
-            <span className="px-4 text-xs text-muted-foreground">OR</span>
-            <Separator className="flex-1 bg-border" />
-          </div>
-
-          <form onSubmit={handleEmailAuth} className="w-full space-y-4">
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input 
-                type="email" 
-                placeholder="Email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="pl-10 h-12"
-                disabled={isAuthLoading}
-              />
-            </div>
-             <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-5" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6z"/>
-              </svg>
-              <Input 
-                type="password" 
-                placeholder="Password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className="pl-10 h-12"
-                disabled={isAuthLoading}
-              />
-            </div>
-
-            <Button type="submit" className="w-full h-12 text-base continue-button-pulse" disabled={isAuthLoading}>
-              {isAuthLoading ? "Please wait..." : (mode === 'signin' ? 'Sign In' : 'Create Account')}
-            </Button>
-          </form>
-
-          <p className="text-sm text-muted-foreground mt-6">
-            {mode === 'signin' ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')} className="underline font-bold hover:text-foreground">
-              {mode === 'signin' ? 'Sign Up' : 'Sign In'}
-            </button>
-          </p>
-
-          <p className="text-xs text-muted-foreground mt-8">
-            By continuing, you agree to our{" "}
-            <Link href="/terms" className="underline hover:text-foreground">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className="underline hover:text-foreground">
-              Privacy Policy
-            </Link>
-            .
-          </p>
         </m.div>
       </div>
     </main>

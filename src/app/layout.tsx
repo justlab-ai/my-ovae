@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 import { MotionProvider } from '@/components/motion-provider';
 import React from 'react';
-import { FirebaseClientProvider } from '@/firebase';
+
 import { ThemeProvider } from '@/components/theme-provider';
 import { CookieConsent } from '@/components/cookie-consent';
 import { GlobalNav } from '@/components/navigation/GlobalNav';
@@ -46,13 +46,11 @@ export default function RootLayout({
             enableSystem={false}
             themes={['dark', 'light']}
           >
-            <FirebaseClientProvider>
               <MotionProvider>
                 <GlobalNav>
                     {children}
                 </GlobalNav>
               </MotionProvider>
-            </FirebaseClientProvider>
           </ThemeProvider>
           <Toaster />
           <CookieConsent />

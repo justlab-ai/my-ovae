@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { m } from 'framer-motion';
 import { Logo } from '@/components/logo';
-import { useUser } from '@/firebase';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -24,9 +24,13 @@ import { Skeleton } from '../ui/skeleton';
 import { useRouter } from 'next/navigation';
 
 export const Header: React.FC = () => {
-    const { user, isUserLoading } = useUser();
+    const { user, isUserLoading } = { user: {
+        displayName: "John Doe",
+        email: "john.doe@example.com",
+        photoURL: "https://randomuser.me/api/portraits/men/32.jpg",
+        uid: "123"
+    }, isUserLoading: false };
     const { theme, setTheme } = useTheme();
-    const auth = useAuth();
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
 
@@ -35,10 +39,7 @@ export const Header: React.FC = () => {
     }, []);
     
     const handleLogout = async () => {
-        if (auth) {
-            await auth.signOut();
-            router.push('/login');
-        }
+        router.push('/login');
     };
 
     const renderUserMenu = () => {

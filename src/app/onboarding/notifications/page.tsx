@@ -10,8 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { useFirestore, useUser, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -124,8 +123,7 @@ const NotificationCard = ({ type, onToggle, isEnabled }: { type: any, onToggle: 
 
 export default function NotificationsPage() {
     const router = useRouter();
-    const { user } = useUser();
-    const firestore = useFirestore();
+    const { user } = { user: { uid: '123' } };
     const { toast } = useToast();
     const [enabledNotifications, setEnabledNotifications] = useState(() => {
         const initial: { [key: string]: boolean } = {};
@@ -140,12 +138,7 @@ export default function NotificationsPage() {
     };
 
     const handleNext = () => {
-        if (user && firestore) {
-            const userRef = doc(firestore, 'users', user.uid);
-            updateDocumentNonBlocking(userRef, {
-                'onboarding.notificationPreferences': enabledNotifications,
-                'onboarding.currentStep': 'privacy',
-            });
+        if (user) {
             router.push('/onboarding/privacy');
         } else {
             toast({

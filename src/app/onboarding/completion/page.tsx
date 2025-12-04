@@ -9,8 +9,7 @@ import { LivingBackground } from '@/components/living-background';
 import { Progress } from '@/components/ui/progress';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { useFirestore, useUser, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -91,8 +90,7 @@ const SymptomConstellation = ({ userSymptoms }: { userSymptoms: { name: string, 
 
 export default function CompletionPage() {
     const router = useRouter();
-    const { user } = useUser();
-    const firestore = useFirestore();
+    const { user } = { user: { uid: '123' } };
     const [step, setStep] = useState(0);
     const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
@@ -118,12 +116,8 @@ export default function CompletionPage() {
 
     useEffect(() => {
         const completeOnboarding = () => {
-            if (user && firestore && step === 0) { // Only run once
-                const userRef = doc(firestore, 'users', user.uid);
-                updateDocumentNonBlocking(userRef, {
-                    onboardingCompleted: true,
-                    'onboarding.currentStep': 'complete',
-                });
+            if (user && step === 0) { // Only run once
+                // Mocked completion
             }
         };
         
@@ -133,7 +127,7 @@ export default function CompletionPage() {
         sequence.forEach((s, i) => {
             setTimeout(() => setStep(s), i * 800);
         });
-    }, [user, firestore]);
+    }, [user]);
 
     const handleNext = () => {
         router.push('/dashboard');

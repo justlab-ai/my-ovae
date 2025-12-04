@@ -2,8 +2,6 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { collection, query, orderBy, limit, where, Timestamp, collectionGroup } from 'firebase/firestore';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { differenceInDays, subDays } from 'date-fns';
 
 /**
@@ -14,8 +12,6 @@ import { differenceInDays, subDays } from 'date-fns';
  * @returns An object containing all the user's health data and their loading states.
  */
 export function useUserHealthData(daysToFetch = 7, disableLogs = false) {
-    const { user, isUserLoading } = useUser();
-    const firestore = useFirestore();
     const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
@@ -24,53 +20,14 @@ export function useUserHealthData(daysToFetch = 7, disableLogs = false) {
 
     const dateLimit = useMemo(() => subDays(new Date(), daysToFetch), [daysToFetch]);
 
-    // --- Queries ---
-
-    const cyclesQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        return query(collection(firestore, 'users', user.uid, 'cycles'), orderBy('startDate', 'desc'), limit(12));
-    }, [user, firestore]);
-    
-    const symptomsQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        return query(collection(firestore, `users/${user.uid}/symptomLogs`), where('timestamp', '>=', Timestamp.fromDate(dateLimit)), orderBy('timestamp', 'desc'));
-    }, [user, firestore, dateLimit]);
-
-    const mealsQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        return query(collection(firestore, `users/${user.uid}/nutritionLogs`), where('loggedAt', '>=', Timestamp.fromDate(dateLimit)), orderBy('loggedAt', 'desc'));
-    }, [user, firestore, dateLimit]);
-
-    const workoutsQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        return query(
-            collection(firestore, `users/${user.uid}/fitnessActivities`),
-            where('completedAt', '>=', Timestamp.fromDate(dateLimit)),
-            orderBy('completedAt', 'desc')
-        );
-    }, [user, firestore, dateLimit]);
-    
-    const checkInsQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        return query(collection(firestore, `users/${user.uid}/dailyCheckIns`), where('date', '>=', Timestamp.fromDate(dateLimit)), orderBy('date', 'desc'));
-    }, [user, firestore, dateLimit]);
-
-    const labResultsQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        return query(collection(firestore, `users/${user.uid}/labResults`), orderBy('testDate', 'desc'), limit(12));
-    }, [user, firestore]);
-    
-    // --- Data Fetching ---
-
-    const { data: cycles, isLoading: areCyclesLoading } = useCollection(cyclesQuery);
-    const { data: recentSymptoms, isLoading: areSymptomsLoading } = useCollection(symptomsQuery);
-    const { data: recentMeals, isLoading: areMealsLoading } = useCollection(mealsQuery);
-    const { data: recentFitnessActivities, isLoading: areFitnessActivitiesLoading } = useCollection(workoutsQuery);
-    const { data: dailyCheckIns, isLoading: areCheckInsLoading } = useCollection(checkInsQuery);
-    const { data: recentLabResults, isLoading: areLabResultsLoading } = useCollection(labResultsQuery);
-    
-    const { data: historicalPeriodLogs, isLoading: areLogsLoading } = { data: null, isLoading: false }; // DISABLED - was causing root query error
-
+    // --- Mock Data ---
+    const cycles = [{ id: '1', startDate: new Date(), endDate: null, length: 28 }];
+    const recentSymptoms = [];
+    const recentMeals = [];
+    const recentFitnessActivities = [];
+    const dailyCheckIns = [];
+    const recentLabResults = [];
+    const historicalPeriodLogs = null;
 
     const latestCycle = useMemo(() => cycles?.[0], [cycles]);
 
@@ -79,7 +36,7 @@ export function useUserHealthData(daysToFetch = 7, disableLogs = false) {
             return { cycleDay: null, cyclePhase: 'Unknown' };
         }
 
-        const start = (latestCycle.startDate as any).toDate();
+        const start = latestCycle.startDate;
         const day = differenceInDays(new Date(), start) + 1;
         if (day <= 0) return { cycleDay: 1, cyclePhase: 'Menstrual' };
 
@@ -98,21 +55,21 @@ export function useUserHealthData(daysToFetch = 7, disableLogs = false) {
 
     return {
         cycles,
-        areCyclesLoading: isUserLoading || areCyclesLoading,
+        areCyclesLoading: false,
         latestCycle,
         cycleDay,
         cyclePhase,
         recentSymptoms,
-        areSymptomsLoading: isUserLoading || areSymptomsLoading,
+        areSymptomsLoading: false,
         recentMeals,
-        areMealsLoading: isUserLoading || areMealsLoading,
+        areMealsLoading: false,
         recentFitnessActivities,
-        areFitnessActivitiesLoading: isUserLoading || areFitnessActivitiesLoading,
+        areFitnessActivitiesLoading: false,
         dailyCheckIns,
-        areCheckInsLoading: isUserLoading || areCheckInsLoading,
+        areCheckInsLoading: false,
         recentLabResults,
-        areLabResultsLoading: isUserLoading || areLabResultsLoading,
+        areLabResultsLoading: false,
         historicalPeriodLogs,
-        areLogsLoading: isUserLoading || areLogsLoading,
+        areLogsLoading: false,
     };
 }

@@ -8,8 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Calendar } from '@/components/ui/calendar';
 import { Moon, Droplet, Sun, Zap, Info, CalendarClock, Target, CalendarHeart, BrainCircuit, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUser, useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, limit, writeBatch, doc, where, getDocs } from 'firebase/firestore';
+
 import { DateRange, DayModifiers } from 'react-day-picker';
 import { addDays, differenceInDays, format, startOfDay, isFuture } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -257,8 +256,7 @@ const CycleHistory = ({ cycles }: { cycles: any[] }) => {
 
 
 export default function CycleTrackerPage() {
-  const { user } = useUser();
-  const firestore = useFirestore();
+  const { user } = { user: { uid: '123' } };
   const { toast } = useToast();
   const [period, setPeriod] = useState<DateRange | undefined>();
   const [selectedFlow, setSelectedFlow] = useState<string | null>(null);
@@ -270,82 +268,27 @@ export default function CycleTrackerPage() {
     if (!historicalPeriodLogs) return [];
     
     const dates: Date[] = [];
-if (Array.isArray(historicalPeriodLogs)) {
- (historicalPeriodLogs as any[]).forEach(log => {
-    const logDate = (log.date as any)?.toDate();
-    if (logDate && log.flow && log.flow !== 'none') {
-      dates.push(logDate);
+    if (Array.isArray(historicalPeriodLogs)) {
+        (historicalPeriodLogs as any[]).forEach(log => {
+            const logDate = new Date(log.date);
+            if (logDate && log.flow && log.flow !== 'none') {
+                dates.push(logDate);
+            }
+        });
     }
-  });
-}
     
     return dates;
   }, [historicalPeriodLogs]);
 
 
   const handleLogPeriod = async () => {
-    if (!user || !firestore || !period?.from || isLogging) {
+    if (!user || !period?.from || isLogging) {
       if(!period?.from) toast({ variant: 'destructive', title: 'Error', description: 'Please select a period start date.' });
       return;
     }
     setIsLogging(true);
-    const { from, to } = period;
-    const startDate = startOfDay(from);
-
+    
     try {
-        const cyclesRef = collection(firestore, 'users', user.uid, 'cycles');
-
-        // Check for overlapping cycles
-        const overlappingQuery = query(cyclesRef, where("startDate", "<=", to || startDate), where("endDate", ">=", startDate));
-        const overlappingDocs = await getDocs(overlappingQuery);
-        if (!overlappingDocs.empty && (!latestCycle || overlappingDocs.docs[0].id !== latestCycle.id)) {
-             toast({ variant: 'destructive', title: 'Overlap Error', description: 'The selected date range overlaps with an existing cycle.'});
-            setIsLogging(false);
-            return;
-        }
-
-        const newCycleData = {
-            userId: user.uid,
-            startDate: startDate,
-            endDate: to ? startOfDay(to) : null,
-            length: to ? differenceInDays(startOfDay(to), startDate) + 1 : null,
-            notes: "",
-        };
-        
-        let cycleId: string | undefined;
-        const isUpdatingCurrentCycle = latestCycle && !latestCycle.endDate && format((latestCycle.startDate as any).toDate(), 'yyyy-MM-dd') === format(startDate, 'yyyy-MM-dd');
-
-        if (isUpdatingCurrentCycle) {
-            cycleId = latestCycle.id;
-            const cycleRef = doc(firestore, 'users', user.uid, 'cycles', latestCycle.id);
-            await updateDocumentNonBlocking(cycleRef, {
-                endDate: to ? startOfDay(to) : null,
-                length: to ? differenceInDays(startOfDay(to), startDate) + 1 : null,
-            });
-        } else {
-            const newDocRef = await addDocumentNonBlocking(cyclesRef, newCycleData);
-            cycleId = newDocRef.id;
-        }
-      
-        if(selectedFlow && cycleId) {
-            let currentDay = startDate;
-            const lastDay = to ? startOfDay(to) : currentDay;
-            const batch = writeBatch(firestore);
-
-            while(currentDay <= lastDay) {
-              const logId = format(currentDay, 'yyyy-MM-dd');
-              const logRef = doc(firestore, 'users', user.uid, 'cycles', cycleId, 'logs', logId);
-              batch.set(logRef, {
-                  cycleId: cycleId,
-                  userId: user.uid, // Denormalize for security rules
-                  date: currentDay,
-                  flow: selectedFlow
-              }, { merge: true });
-              currentDay = addDays(currentDay, 1);
-            }
-            await batch.commit();
-        }
-
         toast({ title: 'Cycle Logged!', description: 'Your cycle data has been updated.' });
         setPeriod(undefined);
         setSelectedFlow(null);

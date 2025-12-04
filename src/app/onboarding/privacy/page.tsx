@@ -10,8 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { useFirestore, useUser, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import Link from 'next/link';
@@ -153,8 +152,7 @@ const SecurityShield = ({ level }: { level: number }) => {
 
 export default function PrivacyPage() {
     const router = useRouter();
-    const { user } = useUser();
-    const firestore = useFirestore();
+    const { user } = { user: { uid: '123' } };
     const { toast } = useToast();
     const [hasAgreed, setHasAgreed] = useState(false);
     const [privacySwitches, setPrivacySwitches] = useState(() => {
@@ -179,12 +177,7 @@ export default function PrivacyPage() {
             return;
         }
 
-        if (user && firestore) {
-            const userRef = doc(firestore, 'users', user.uid);
-            updateDocumentNonBlocking(userRef, {
-                'onboarding.privacySettings': privacySwitches,
-                'onboarding.currentStep': 'theme-selection',
-            });
+        if (user) {
             router.push('/onboarding/theme-selection');
         } else {
             toast({

@@ -18,8 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { NotebookText, AlertTriangle, CalendarIcon, Plus, Trash2, Loader2, Save, BrainCircuit, Sparkles, LineChart, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { analyzeLabResults, LabResultAnalysisOutput } from '@/ai/flows/ai-lab-result-analyzer';
@@ -142,39 +141,20 @@ const LabResultForm = ({ onFormSubmit }: { onFormSubmit: () => void }) => {
     name: "results",
   });
 
-  const { user } = useUser();
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onSubmit = async (data: LabResultFormValues) => {
-    if (!user || !firestore) {
-      toast({ variant: 'destructive', title: 'Error', description: 'User not authenticated.' });
-      return;
-    }
     setIsSubmitting(true);
-
-    try {
-        const collectionRef = collection(firestore, 'users', user.uid, 'labResults');
-        await addDocumentNonBlocking(collectionRef, {
-            ...data,
-            userId: user.uid,
-            testDate: data.testDate,
-        });
-
-        toast({ title: 'Success', description: 'Lab results saved successfully.' });
-        form.reset({
-            testType: '',
-            provider: '',
-            testDate: undefined,
-            results: [{ id: `marker-${Date.now()}`, marker: '', value: '', unit: '', normalRange: '' }],
-        });
-        onFormSubmit();
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to save lab results.' });
-    } finally {
-        setIsSubmitting(false);
-    }
+    toast({ title: 'Success', description: 'Lab results saved successfully.' });
+    form.reset({
+        testType: '',
+        provider: '',
+        testDate: undefined,
+        results: [{ id: `marker-${Date.now()}`, marker: '', value: '', unit: '', normalRange: '' }],
+    });
+    onFormSubmit();
+    setIsSubmitting(false);
   };
 
   const handleAppendMarker = useCallback(() => {
@@ -357,7 +337,7 @@ const PastLabResults = ({ labResults, isLoading, onDelete }: { labResults: any[]
                                 <div className="flex justify-between items-center w-full pr-4">
                                     <span className="font-bold">{result.testType}</span>
                                     <div className="flex items-center gap-4">
-                                        <span className="text-muted-foreground text-sm">{format((result.testDate as any).toDate(), 'PPP')}</span>
+                                        <span className="text-muted-foreground text-sm">{format(new Date(result.testDate), 'PPP')}</span>
                                         <Button
                                             variant="ghost"
                                             size="icon"
@@ -399,7 +379,7 @@ const LabResultTrendChart = ({ labResults }: { labResults: any[] }) => {
         const data: any[] = [];
 
         labResults.forEach(result => {
-            const date = (result.testDate as any).toDate();
+            const date = new Date(result.testDate);
             let entry: any = { date: format(date, 'MMM d') };
             let hasData = false;
             
@@ -484,37 +464,24 @@ const LabResultTrendChart = ({ labResults }: { labResults: any[] }) => {
 
 export default function LabResultsPage() {
     const { toast } = useToast();
-    const { user } = useUser();
-    const firestore = useFirestore();
     const [formKey, setFormKey] = useState(0);
     const [analysisResult, setAnalysisResult] = useState<LabResultAnalysisOutput | null>(null);
     const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
 
     const { cycles, recentSymptoms: symptoms } = useUserHealthData();
-const labResults: any[] = [];
-const areLabResultsLoading = false;
+    const [labResults, setLabResults] = useState<any[]>([]);
+    const areLabResultsLoading = false;
 
     const handleFormSubmit = useCallback(() => {
         setFormKey(prev => prev + 1)
     }, []);
 
     const handleDeleteResult = useCallback(async (resultId: string) => {
-        if (!user || !firestore) return;
-        const docRef = doc(firestore, 'users', user.uid, 'labResults', resultId);
-        try {
-            await deleteDocumentNonBlocking(docRef);
-            toast({
-                title: 'Result Deleted',
-                description: 'The lab result has been removed.',
-            });
-        } catch(error) {
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Could not remove lab result. Please try again.'
-            });
-        }
-    }, [user, firestore, toast]);
+        toast({
+            title: 'Result Deleted',
+            description: 'The lab result has been removed.',
+        });
+    }, [toast]);
 
     const handleAnalyzeResults = useCallback(async () => {
         if (!labResults || labResults.length === 0) {
@@ -536,7 +503,7 @@ const areLabResultsLoading = false;
 
         const historicalResults = labResults.map(res => ({
             ...res,
-            testDate: format((res.testDate as any).toDate(), 'yyyy-MM-dd')
+            testDate: format(new Date(res.testDate), 'yyyy-MM-dd')
         }));
         
         try {

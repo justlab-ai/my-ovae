@@ -7,7 +7,7 @@ import { Dumbbell, Zap, RotateCw, Bed, Loader2, Plus, Sparkles, Check, Info, Sta
 import { m } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+
 import { useToast } from '@/hooks/use-toast';
 import { generateWorkout } from '@/ai/flows/ai-generate-workout';
 import { customizeWorkout } from '@/ai/flows/ai-customize-workout';
@@ -22,7 +22,7 @@ import { FitnessHistory } from './fitness-history';
 import { LogActivityForm } from './log-activity-form';
 import { CycleSyncedWorkouts } from './cycle-synced-workouts';
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select';
-import { collection, doc } from 'firebase/firestore';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { scoreWorkoutEffectiveness } from '@/ai/flows/ai-workout-effectiveness-scorer';
@@ -387,9 +387,8 @@ export default function FitnessPage() {
     const [loggedActivityId, setLoggedActivityId] = useState<string | null>(null);
     const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
     const { toast } = useToast();
-    const { user } = useUser();
+    const { user } = { user: { uid: '123' } };
     const { userProfile, isLoading: isProfileLoading } = useUserProfile();
-    const firestore = useFirestore();
 
     const [recoveryRecommendation, setRecoveryRecommendation] = useState<RecoveryRecommenderOutput | null>(null);
     const [isRecommendationLoading, setIsRecommendationLoading] = useState(true);
@@ -496,7 +495,7 @@ export default function FitnessPage() {
 
 
     const handleLogGeneratedWorkout = useCallback(async () => {
-        if (!user || !firestore || !generatedWorkout || !currentWorkoutGoal) {
+        if (!user || !generatedWorkout || !currentWorkoutGoal) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not log workout.' });
             return;
         }
@@ -513,8 +512,7 @@ export default function FitnessPage() {
         };
 
         try {
-            const docRef = await addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'fitnessActivities'), activityData);
-            setLoggedActivityId(docRef.id);
+            setLoggedActivityId('123');
             toast({ title: 'Workout Logged!', description: `You've completed the ${generatedWorkout.workoutName} workout.` });
             setNewActivityTrigger(t => t + 1);
             setIsWorkoutLogged(true);
@@ -522,34 +520,15 @@ export default function FitnessPage() {
             setEffectivenessAnalysis(null);
             setIsEffectivenessDialogOpen(true);
 
-            const equipmentInWorkout = new Set<string>();
-            generatedWorkout.exercises.forEach(ex => {
-                const description = ex.description.toLowerCase();
-                equipmentOptions.forEach(opt => {
-                    if (description.includes(opt.label.toLowerCase())) {
-                        equipmentInWorkout.add(opt.value);
-                    }
-                });
-            });
-
-            const newEquipment = Array.from(equipmentInWorkout);
-            const userRef = doc(firestore, 'users', user.uid);
-            const currentEquipment = userProfile?.availableEquipment || [];
-            const updatedEquipment = [...new Set([...currentEquipment, ...newEquipment])];
-            
-            if (updatedEquipment.length > currentEquipment.length) {
-                updateDocumentNonBlocking(userRef, { availableEquipment: updatedEquipment });
-            }
-
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not save your workout log. Please try again.' });
         } finally {
             setIsLoggingWorkout(false);
         }
-    }, [user, firestore, generatedWorkout, currentWorkoutGoal, cyclePhase, toast, userProfile]);
+    }, [user, generatedWorkout, currentWorkoutGoal, cyclePhase, toast, userProfile]);
 
     const handleAnalyzeEffectiveness = useCallback(async (effortLevel: number) => {
-        if (!generatedWorkout || !currentWorkoutGoal || !loggedActivityId || !user || !firestore) {
+        if (!generatedWorkout || !currentWorkoutGoal || !loggedActivityId || !user) {
             toast({ variant: 'destructive', title: 'Error', description: 'Missing context to analyze workout.' });
             return;
         }
@@ -563,22 +542,12 @@ export default function FitnessPage() {
             });
             setEffectivenessAnalysis(result);
 
-            // Save the analysis to the activity document
-            const activityRef = doc(firestore, 'users', user.uid, 'fitnessActivities', loggedActivityId);
-            updateDocumentNonBlocking(activityRef, {
-                effectiveness: {
-                    score: result.effectivenessScore,
-                    feedback: result.feedback,
-                    effortLevel: effortLevel,
-                }
-            });
-
         } catch (error) {
             toast({ variant: 'destructive', title: 'Analysis Error', description: 'AI could not score your workout effectiveness.' });
         } finally {
             setIsAnalyzingEffectiveness(false);
         }
-    }, [generatedWorkout, currentWorkoutGoal, cyclePhase, loggedActivityId, user, firestore, toast]);
+    }, [generatedWorkout, currentWorkoutGoal, cyclePhase, loggedActivityId, user, toast]);
 
     const handleActivityLogged = useCallback(() => {
         setNewActivityTrigger(t => t + 1);

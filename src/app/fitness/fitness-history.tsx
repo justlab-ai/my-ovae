@@ -5,20 +5,12 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Loader2, Flame } from 'lucide-react';
 import { m } from 'framer-motion';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+
 import { formatDistanceToNow } from 'date-fns';
 
 export const FitnessHistory = ({ newActivityTrigger }: { newActivityTrigger: number }) => {
-    const { user } = useUser();
-    const firestore = useFirestore();
-    
-    const activitiesQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        return query(collection(firestore, `users/${user.uid}/fitnessActivities`), orderBy('completedAt', 'desc'), limit(10));
-    }, [user, firestore, newActivityTrigger]);
-    
-    const { data: activities, isLoading } = useCollection(activitiesQuery);
+    const activities: any[] = [];
+    const isLoading = false;
 
     return (
         <Card className="glass-card lg:col-span-3">

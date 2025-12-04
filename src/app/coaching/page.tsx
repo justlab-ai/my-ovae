@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { m, AnimatePresence } from 'framer-motion';
 import { generateCoachingTip } from '@/ai/flows/ai-generated-coaching';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, updateDocumentNonBlocking } from '@/firebase';
+
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
@@ -175,9 +175,8 @@ export default function AIHealthAssistantPage() {
     const [isListening, setIsListening] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
-    const { user } = useUser();
+    const { user } = { user: { uid: '123' } };
     const { userProfile } = useUserProfile();
-    const firestore = useFirestore();
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -187,7 +186,7 @@ export default function AIHealthAssistantPage() {
     }, [messages]);
 
     const handleSendMessage = useCallback(async (text: string) => {
-        if (!text.trim() || isLoading || !user || !userProfile || !firestore) {
+        if (!text.trim() || isLoading || !user || !userProfile) {
             if (!user || !userProfile) {
                 toast({
                     variant: 'destructive',
@@ -222,22 +221,6 @@ export default function AIHealthAssistantPage() {
             } else {
                 newAssistantMessage = { id: Date.now() + 1, type: 'assistant', text: result.coachingTip, isEmergency: false, suggestions: result.suggestedFollowUps };
                 
-                // Save conversation to Firestore
-                const userRef = doc(firestore, 'users', user.uid);
-                const newHistoryEntry = {
-                    userQuery: text,
-                    aiResponse: result.coachingTip,
-                    timestamp: new Date().toISOString(),
-                };
-
-                const updatedHistory = [
-                    ...(userProfile.conversationHistory || []),
-                    newHistoryEntry
-                ].slice(-10); // Keep only the last 10 turns
-
-                updateDocumentNonBlocking(userRef, {
-                    conversationHistory: updatedHistory,
-                });
             }
             setMessages(prev => [...prev, newAssistantMessage]);
 
@@ -252,7 +235,7 @@ export default function AIHealthAssistantPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [isLoading, user, userProfile, firestore, toast]);
+    }, [isLoading, user, userProfile, toast]);
     
     const handleFormSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();

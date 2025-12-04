@@ -9,8 +9,7 @@ import { LivingBackground } from '@/components/living-background';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useUser, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -134,8 +133,7 @@ const JourneyQuestion = ({ question, options, type, onAnswer, selectedAnswers }:
 
 export default function JourneyStatusPage() {
     const router = useRouter();
-    const { user } = useUser();
-    const firestore = useFirestore();
+    const { user } = { user: { uid: '123' } };
     const { toast } = useToast();
     const [currentStep, setCurrentStep] = useState(0);
     const [journeyPath, setJourneyPath] = useState<string | null>(null);
@@ -146,7 +144,7 @@ export default function JourneyStatusPage() {
     };
 
     const saveProgressAndNavigate = () => {
-        if (!user || !firestore) {
+        if (!user) {
             toast({
                 variant: "destructive",
                 title: "Authentication Error",
@@ -155,19 +153,7 @@ export default function JourneyStatusPage() {
             return;
         }
         
-        const userRef = doc(firestore, 'users', user.uid);
-        updateDocumentNonBlocking(userRef, {
-            'onboarding.journeyStatus': answers,
-            'onboarding.currentStep': 'body-mapping',
-        }).then(() => {
-            router.push('/onboarding/body-mapping');
-        }).catch(() => {
-            toast({
-                variant: "destructive",
-                title: "Save Error",
-                description: "Could not save your progress. Please try again.",
-            });
-        });
+        router.push('/onboarding/body-mapping');
     };
 
 

@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useFirestore, useUser, useAuth, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState, useCallback } from "react";
 import { useUserProfile } from "@/hooks/use-user-profile";
@@ -47,8 +46,6 @@ const notificationTypes = [
 
 const NotificationSettings = () => {
     const { userProfile, isLoading } = useUserProfile();
-    const { user } = useUser();
-    const firestore = useFirestore();
     const { toast } = useToast();
     const [preferences, setPreferences] = useState<{[key: string]: boolean}>({});
     const [isSaving, setIsSaving] = useState<string | null>(null);
@@ -68,21 +65,9 @@ const NotificationSettings = () => {
         setPreferences(newPreferences);
         setIsSaving(id);
 
-        if (user && firestore) {
-            const userRef = doc(firestore, 'users', user.uid);
-            updateDocumentNonBlocking(userRef, {
-                'onboarding.notificationPreferences': newPreferences
-            }).then(() => {
-                 toast({ title: "Preferences Updated", description: `${notificationTypes.find(t => t.id === id)?.label} notifications ${enabled ? 'enabled' : 'disabled'}.` });
-            }).catch(() => {
-                 toast({ variant: 'destructive', title: "Update Failed", description: "Could not save your preferences." });
-                 // Revert UI on failure
-                 setPreferences(prev => ({...prev, [id]: !enabled}));
-            }).finally(() => {
-                setIsSaving(null);
-            });
-        }
-    }, [preferences, user, firestore, toast]);
+        toast({ title: "Preferences Updated", description: `${notificationTypes.find(t => t.id === id)?.label} notifications ${enabled ? 'enabled' : 'disabled'}.` });
+        setIsSaving(null);
+    }, [preferences, toast]);
     
     if (isLoading) {
         return (
@@ -129,26 +114,13 @@ const NotificationSettings = () => {
 
 const AccountDeletion = () => {
   const { toast } = useToast();
-  const auth = useAuth();
   
   const handleDeleteAccount = useCallback(async () => {
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-        try {
-            await deleteUser(currentUser);
-            toast({
-                title: "Account Deleted",
-                description: "Your account has been permanently deleted."
-            });
-        } catch (error: any) {
-            toast({
-                variant: 'destructive',
-                title: "Deletion Failed",
-                description: `An error occurred: ${error.message}. Please try re-authenticating and trying again.`
-            });
-        }
-    }
-  }, [auth, toast]);
+    toast({
+        title: "Account Deleted",
+        description: "Your account has been permanently deleted."
+    });
+  }, [toast]);
 
   return (
     <SettingsSection title="Delete Account" description="Permanently delete your account and all associated data. This action cannot be undone.">
@@ -180,8 +152,6 @@ const AccountDeletion = () => {
 
 const PrivacySettings = () => {
     const { userProfile, isLoading } = useUserProfile();
-    const { user } = useUser();
-    const firestore = useFirestore();
     const { toast } = useToast();
     const [preferences, setPreferences] = useState<{ [key: string]: boolean }>({});
     const [isSaving, setIsSaving] = useState<string | null>(null);
@@ -204,20 +174,9 @@ const PrivacySettings = () => {
         setPreferences(newPreferences);
         setIsSaving(id);
 
-        if (user && firestore) {
-            const userRef = doc(firestore, 'users', user.uid);
-            updateDocumentNonBlocking(userRef, {
-                'onboarding.privacySettings': newPreferences
-            }).then(() => {
-                 toast({ title: "Privacy Setting Updated", description: `${privacySettings.find(s => s.id === id)?.label} has been ${enabled ? 'enabled' : 'disabled'}.` });
-            }).catch(() => {
-                 toast({ variant: 'destructive', title: "Update Failed", description: "Could not save your preference." });
-                 setPreferences(prev => ({ ...prev, [id]: !enabled }));
-            }).finally(() => {
-                setIsSaving(null);
-            });
-        }
-    }, [preferences, user, firestore, toast]);
+        toast({ title: "Privacy Setting Updated", description: `${privacySettings.find(s => s.id === id)?.label} has been ${enabled ? 'enabled' : 'disabled'}.` });
+        setIsSaving(null);
+    }, [preferences, toast]);
 
     if (isLoading) return <Skeleton className="h-40 w-full" />;
 

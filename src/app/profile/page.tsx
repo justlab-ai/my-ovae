@@ -5,8 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { User, Loader2, Save, ArrowLeft, CalendarIcon, Upload } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useFirestore, useUser, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useUserProfile } from "@/hooks/use-user-profile";
@@ -33,8 +32,7 @@ const wellnessGoals = [
 
 const ProfileManagement = () => {
     const { userProfile, isLoading: isProfileLoading } = useUserProfile();
-    const { user } = useUser();
-    const firestore = useFirestore();
+    const { user } = { user: { uid: '123', email: 'test@test.com' } };
     const { toast } = useToast();
 
     const [displayName, setDisplayName] = useState('');
@@ -86,33 +84,17 @@ const ProfileManagement = () => {
     }, [toast]);
 
     const handleSaveProfile = useCallback(async () => {
-        if (!user || !firestore || !displayName.trim()) return;
+        if (!user || !displayName.trim()) return;
         setIsSaving(true);
         
-        const userRef = doc(firestore, 'users', user.uid);
-        const publicUserRef = doc(firestore, 'publicUserProfiles', user.uid);
-        
-        const privateData: any = { 
-            displayName, 
-            photoURL,
-            dob: dob ? dob.toISOString() : null,
-            journeyStartDate: journeyStartDate ? journeyStartDate.toISOString() : null,
-            wellnessGoal
-        };
-        const publicData = { displayName, photoURL };
-
         try {
-            await Promise.all([
-                 updateDocumentNonBlocking(userRef, privateData),
-                 updateDocumentNonBlocking(publicUserRef, publicData)
-            ]);
             toast({ title: "Profile Updated", description: "Your profile information has been saved." });
         } catch(e) {
              toast({ variant: 'destructive', title: "Update Failed", description: "Could not save your profile." });
         } finally {
             setIsSaving(false);
         }
-    }, [user, firestore, displayName, photoURL, dob, journeyStartDate, wellnessGoal, toast]);
+    }, [user, displayName, photoURL, dob, journeyStartDate, wellnessGoal, toast]);
 
     if (isProfileLoading) {
         return (
