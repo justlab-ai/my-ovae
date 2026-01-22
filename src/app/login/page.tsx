@@ -3,20 +3,16 @@
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Mail } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { LivingBackground } from "@/components/living-background";
 import { m } from 'framer-motion';
-// [TODO] Implement authentication without Firebase
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useTheme } from "next-themes";
-import { Skeleton } from "@/components/ui/skeleton";
+import { signIn } from "next-auth/react";
+import { Loader2, Mail } from "lucide-react";
 
 const GoogleIcon = () => (
   <svg className="size-5" viewBox="0 0 24 24">
@@ -40,6 +36,58 @@ const GoogleIcon = () => (
 );
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      await signIn("google", { callbackUrl: "/dashboard" });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Could not connect to Google.",
+      });
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return;
+
+    setIsLoading(true);
+    try {
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (res?.error) {
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: "Invalid email or password.",
+        });
+        setIsLoading(false);
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (error) {
+      setIsLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+      });
+    }
+  };
+
   return (
     <main className="relative flex items-center justify-center min-h-screen p-4 overflow-hidden bg-background">
       <LivingBackground />
@@ -52,16 +100,55 @@ export default function LoginPage() {
           className="glass-card-auth rounded-3xl p-8 text-center flex flex-col items-center"
         >
           <Logo className="mb-2" />
-          
+
           <p className="font-accent text-lg text-muted-foreground italic mb-6">
             Your Personalized PCOS Wellness Companion
           </p>
 
-          <div className="w-full space-y-3 mb-6">
-            <p className="text-muted-foreground">
-              Login is temporarily disabled while we upgrade our systems.
-            </p>
+          <Button
+            variant="outline"
+            className="w-full h-12 text-base font-normal gap-2 border-muted-foreground/20 hover:bg-white/5"
+            onClick={handleGoogleLogin}
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader2 className="animate-spin" /> : <GoogleIcon />}
+            Continue with Google
+          </Button>
+
+          <div className="w-full flex items-center gap-2 my-6">
+            <Separator className="flex-1 bg-muted-foreground/20" />
+            <span className="text-xs text-muted-foreground uppercase">Or continue with</span>
+            <Separator className="flex-1 bg-muted-foreground/20" />
           </div>
+
+          <form onSubmit={handleEmailLogin} className="w-full space-y-3 mb-6">
+            <Input
+              type="email"
+              placeholder="Email Address"
+              className="h-11 bg-white/5 border-white/10"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <Input
+              type="password"
+              placeholder="Password"
+              className="h-11 bg-white/5 border-white/10"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <Button className="w-full h-11" type="submit" disabled={isLoading}>
+              {isLoading ? <Loader2 className="animate-spin" /> : "Log In"}
+            </Button>
+          </form>
+
+          <p className="text-sm text-muted-foreground">
+            Don't have an account?{" "}
+            <Link href="/auth-test" className="text-primary hover:underline font-semibold">
+              Sign up (Beta)
+            </Link>
+          </p>
         </m.div>
       </div>
     </main>

@@ -3,33 +3,11 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { getFirestore, collection, query, orderBy, limit, getDocs, where, Timestamp } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase/config';
 import { differenceInDays, subDays } from 'date-fns';
-
-const db = getFirestore(initializeFirebase());
-
-async function getUserData(userId: string, collectionName: string, days: number = 7, count: number = 20) {
-  if (!userId) return [];
-  try {
-    const dateField = collectionName === 'fitnessActivities' ? 'completedAt' : 
-                      collectionName === 'nutritionLogs' ? 'loggedAt' : 
-                      'timestamp';
-
-    const timeLimit = subDays(new Date(), days);
-
-    const q = query(
-      collection(db, 'users', userId, collectionName),
-      where(dateField, '>=', Timestamp.fromDate(timeLimit)),
-      orderBy(dateField, 'desc'),
-      limit(count)
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (e) {
-    return [];
-  }
-}
+import { CycleService } from '@/services/cycles';
+import { SymptomService } from '@/services/symptoms';
+import { NutritionService } from '@/services/nutrition';
+import { FitnessService } from '@/services/fitness';
 
 export const getHealthSummaryForUser = ai.defineTool(
   {
@@ -39,7 +17,9 @@ export const getHealthSummaryForUser = ai.defineTool(
     outputSchema: z.any(),
   },
   async ({ userId }) => {
+    console.log('[getHealthSummaryForUser] Called with userId:', userId);
     if (!userId) {
+      console.error('[getHealthSummaryForUser] Missing userId');
       return { error: 'User ID is required.' };
     }
 
@@ -48,26 +28,31 @@ export const getHealthSummaryForUser = ai.defineTool(
       const [
         cycles,
         symptoms,
-        nutrition,
-        fitness,
+        nutritionLogs,
+        fitnessActivities,
       ] = await Promise.all([
-        getDocs(query(collection(db, 'users', userId, 'cycles'), orderBy('startDate', 'desc'), limit(1))),
-        getUserData(userId, 'symptomLogs', 7, 20),
-        getUserData(userId, 'nutritionLogs', 2, 10), // Nutrition from last 2 days
-        getUserData(userId, 'fitnessActivities', 7, 10),
+        CycleService.getCycles(userId),
+        SymptomService.getSymptoms(userId), // This gets all, we might want to filter by date in service but for now filter in memory if needed or rely on small data
+        NutritionService.getMeals(userId),
+        FitnessService.getActivities(userId),
       ]);
+
+      // Filter for last 7 days in memory for now as services return all (optimization for later: add date filtering to services)
+      const recentSymptoms = symptoms.filter(s => new Date(s.timestamp) >= subDays(new Date(), 7));
+      const recentNutrition = nutritionLogs.filter(n => new Date(n.loggedAt) >= subDays(new Date(), 2));
+      const recentFitness = fitnessActivities.filter(f => new Date(f.completedAt) >= subDays(new Date(), 7));
 
       // Process cycle data
       let cycleDay = null;
       let cyclePhase = 'Unknown';
-      const latestCycle = cycles.docs[0]?.data();
+      const latestCycle = cycles[0];
 
-      if (latestCycle?.startDate && !latestCycle.endDate) {
-        const start = latestCycle.startDate.toDate();
+      if (latestCycle && latestCycle.startDate && !latestCycle.endDate) {
+        const start = new Date(latestCycle.startDate);
         const day = differenceInDays(new Date(), start) + 1;
         cycleDay = day > 0 ? day : 1;
-        
-        const avgCycleLength = latestCycle.length || 28;
+
+        const avgCycleLength = 28; // Default or calculate from history
         const ovulationDay = Math.round(avgCycleLength - 14);
         const follicularEnd = ovulationDay - 3;
         const ovulationEnd = ovulationDay + 2;
@@ -83,15 +68,15 @@ export const getHealthSummaryForUser = ai.defineTool(
           day: cycleDay,
           phase: cyclePhase,
         },
-        symptoms: symptoms.map((s: any) => s.symptomType),
-        nutrition: nutrition.map((n: any) => ({ 
-            mealName: n.mealName, 
-            pcosScore: n.pcosScore,
-            foodItems: n.foodItems
+        symptoms: recentSymptoms.map((s) => s.symptomType),
+        nutrition: recentNutrition.map((n) => ({
+          mealName: n.mealName,
+          pcosScore: n.pcosScore,
+          foodItems: n.foodItems
         })),
-        fitness: fitness.map((f: any) => ({
-            activityType: f.activityType,
-            duration: f.duration
+        fitness: recentFitness.map((f) => ({
+          activityType: f.activityType,
+          duration: f.duration
         })),
       };
     } catch (error: any) {

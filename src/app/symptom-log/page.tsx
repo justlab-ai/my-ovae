@@ -8,16 +8,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { format, startOfDay, endOfDay, subDays } from "date-fns";
-import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, query, where, Timestamp, doc, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { AnimatePresence, m } from "framer-motion";
 import { Textarea } from "@/components/ui/textarea";
-import { suggestSymptomsFromText, AISuggestSymptomsOutput } from "@/ai/flows/ai-suggested-symptoms";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useSession } from "next-auth/react";
+import useSWR, { mutate } from 'swr';
+// import { suggestSymptomsFromText, AISuggestSymptomsOutput } from "@/ai/flows/ai-suggested-symptoms"; // TODO: Migrate AI
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const SymptomConstellation = ({ symptoms }: { symptoms: any[] }) => {
     const [isClient, setIsClient] = useState(false);
@@ -43,22 +44,22 @@ const SymptomConstellation = ({ symptoms }: { symptoms: any[] }) => {
         <Card className="glass-card h-[600px] w-full flex items-center justify-center overflow-hidden">
             <CardContent className="w-full h-full p-0">
                 <div className="relative w-full h-full flex items-center justify-center">
-                    <div className="absolute inset-0 bg-grid-slate-700/[0.05] bg-[bottom_1px_center] dark:bg-grid-slate-400/[0.05]" style={{ maskImage: 'linear-gradient(to bottom, transparent, black, black, transparent)'}}></div>
+                    <div className="absolute inset-0 bg-grid-slate-700/[0.05] bg-[bottom_1px_center] dark:bg-grid-slate-400/[0.05]" style={{ maskImage: 'linear-gradient(to bottom, transparent, black, black, transparent)' }}></div>
                     <AnimatePresence>
                         {symptoms.length > 0 ? (
                             symptomPositions.map((symptom, i) => (
                                 <m.div
                                     key={symptom.id}
                                     initial={{ opacity: 0, scale: 0 }}
-                                    animate={{ 
+                                    animate={{
                                         opacity: [0.5, 1, 0.5],
-                                        scale: 1, 
-                                        translateX: symptom.x, 
-                                        translateY: symptom.y 
+                                        scale: 1,
+                                        translateX: symptom.x,
+                                        translateY: symptom.y
                                     }}
                                     exit={{ opacity: 0, scale: 0 }}
-                                    transition={{ 
-                                        duration: 2, 
+                                    transition={{
+                                        duration: 2,
                                         delay: i * 0.1,
                                         repeat: Infinity,
                                         repeatType: 'mirror',
@@ -66,11 +67,11 @@ const SymptomConstellation = ({ symptoms }: { symptoms: any[] }) => {
                                     }}
                                     className="absolute group cursor-pointer"
                                 >
-                                    <Star 
-                                        className="text-primary transition-all duration-300" 
-                                        fill="currentColor" 
+                                    <Star
+                                        className="text-primary transition-all duration-300"
+                                        fill="currentColor"
                                         size={(symptom.severity || 1) * 8}
-                                        style={{ filter: `brightness(${(symptom.severity / 5) * 1.5})`}}
+                                        style={{ filter: `brightness(${(symptom.severity / 5) * 1.5})` }}
                                     />
                                     <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2 bg-popover text-popover-foreground rounded-md text-xs shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                                         {symptom.symptomType} (Severity: {symptom.severity})
@@ -78,7 +79,7 @@ const SymptomConstellation = ({ symptoms }: { symptoms: any[] }) => {
                                 </m.div>
                             ))
                         ) : (
-                             <div className="text-center text-muted-foreground">
+                            <div className="text-center text-muted-foreground">
                                 <h3 className="text-2xl font-headline text-gradient">Symptom Constellation™</h3>
                                 <p>Log a symptom to see your universe.</p>
                             </div>
@@ -91,7 +92,7 @@ const SymptomConstellation = ({ symptoms }: { symptoms: any[] }) => {
 };
 
 const SymptomTimeline = ({ symptoms, isLoading, onDelete }: { symptoms: any[], isLoading: boolean, onDelete: (id: string) => void }) => {
-    
+
     return (
         <Card className="glass-card">
             <CardHeader>
@@ -99,38 +100,38 @@ const SymptomTimeline = ({ symptoms, isLoading, onDelete }: { symptoms: any[], i
             </CardHeader>
             <CardContent>
                 <AnimatePresence>
-                {isLoading ? (
-                    <div className="space-y-2">
-                        <Skeleton className="h-16 w-full" />
-                        <Skeleton className="h-16 w-full" />
-                    </div>
-                ) : symptoms && symptoms.length > 0 ? (
-                     <div className="space-y-4">
-                        {symptoms.map((symptom) => (
-                            <m.div 
-                                key={symptom.id}
-                                layout
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
-                                className="flex items-center gap-4 bg-black/20 p-3 rounded-lg"
-                            >
-                                <div className="text-lg">{symptom.symptomType === 'Cramps' ? '💢' : symptom.symptomType === 'Mood Swings' ? '🎭' : symptom.symptomType === 'Fatigue' ? '😴' : symptom.symptomType === 'Acne' ? '✨' : symptom.symptomType === 'Bloating' ? '🎈' : '🤕'}</div>
-                                <div className="flex-1">
-                                    <p className="font-bold">{symptom.symptomType}</p>
-                                    <p className="text-xs text-muted-foreground">Severity: {symptom.severity}/5</p>
-                                </div>
-                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => onDelete(symptom.id)}>
-                                    <Trash2 className="size-4" />
-                                </Button>
-                            </m.div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="h-40 flex items-center justify-center text-muted-foreground">
-                        <p>No symptoms logged for this date yet.</p>
-                    </div>
-                )}
+                    {isLoading ? (
+                        <div className="space-y-2">
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                        </div>
+                    ) : symptoms && symptoms.length > 0 ? (
+                        <div className="space-y-4">
+                            {symptoms.map((symptom) => (
+                                <m.div
+                                    key={symptom.id}
+                                    layout
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
+                                    className="flex items-center gap-4 bg-black/20 p-3 rounded-lg"
+                                >
+                                    <div className="text-lg">{symptom.symptomType === 'Cramps' ? '💢' : symptom.symptomType === 'Mood Swings' ? '🎭' : symptom.symptomType === 'Fatigue' ? '😴' : symptom.symptomType === 'Acne' ? '✨' : symptom.symptomType === 'Bloating' ? '🎈' : '🤕'}</div>
+                                    <div className="flex-1">
+                                        <p className="font-bold">{symptom.symptomType}</p>
+                                        <p className="text-xs text-muted-foreground">Severity: {symptom.severity}/5</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => onDelete(symptom.id)}>
+                                        <Trash2 className="size-4" />
+                                    </Button>
+                                </m.div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="h-40 flex items-center justify-center text-muted-foreground">
+                            <p>No symptoms logged on this date.</p>
+                        </div>
+                    )}
                 </AnimatePresence>
             </CardContent>
         </Card>
@@ -138,12 +139,12 @@ const SymptomTimeline = ({ symptoms, isLoading, onDelete }: { symptoms: any[], i
 };
 
 const symptomsList = [
-  { name: 'Fatigue', severity: 3, bodyZone: 'General' },
-  { name: 'Bloating', severity: 4, bodyZone: 'Torso' },
-  { name: 'Cramps', severity: 2, bodyZone: 'Pelvis' },
-  { name: 'Acne', severity: 3, bodyZone: 'Face' },
-  { name: 'Mood Swings', severity: 5, bodyZone: 'Head' },
-  { name: 'Headache', severity: 2, bodyZone: 'Head' },
+    { name: 'Fatigue', severity: 3, bodyZone: 'General' },
+    { name: 'Bloating', severity: 4, bodyZone: 'Torso' },
+    { name: 'Cramps', severity: 2, bodyZone: 'Pelvis' },
+    { name: 'Acne', severity: 3, bodyZone: 'Face' },
+    { name: 'Mood Swings', severity: 5, bodyZone: 'Head' },
+    { name: 'Headache', severity: 2, bodyZone: 'Head' },
 ];
 
 const SymptomQuickLog = ({ onLog }: { onLog: (symptom: any) => void }) => {
@@ -155,7 +156,7 @@ const SymptomQuickLog = ({ onLog }: { onLog: (symptom: any) => void }) => {
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
                 {symptomsList.map((symptom) => (
-                    <Button 
+                    <Button
                         key={symptom.name}
                         variant="outline"
                         onClick={() => onLog(symptom)}
@@ -194,189 +195,49 @@ const DateSelector = ({ date, setDate }: { date: Date | undefined, setDate: (dat
 }
 
 const AISymptomLogger = ({ onLog, symptomHistory }: { onLog: (symptom: any) => void, symptomHistory: any[] }) => {
-    const [text, setText] = useState('');
-    const [suggestions, setSuggestions] = useState<AISuggestSymptomsOutput['suggestions']>([]);
-    const [isSuggesting, setIsSuggesting] = useState(false);
-    const [isListening, setIsListening] = useState(false);
-    const recognitionRef = useRef<any>(null);
-    const { toast } = useToast();
-    
-    useEffect(() => {
-        // SpeechRecognition is client-side only
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = false;
-            recognitionRef.current.interimResults = true;
-
-            recognitionRef.current.onresult = (event: any) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-                setText(prev => prev + finalTranscript + interimTranscript);
-            };
-            
-            recognitionRef.current.onerror = (event: any) => {
-                 toast({ variant: 'destructive', title: 'Speech Recognition Error', description: event.error });
-                 setIsListening(false);
-            };
-            
-            recognitionRef.current.onend = () => {
-                setIsListening(false);
-                if (text.trim()) {
-                    handleSuggest(text);
-                }
-            };
-
-        }
-    }, [toast, text]);
-
-    const toggleListening = () => {
-        if (!recognitionRef.current) {
-            toast({ variant: 'destructive', title: 'Unsupported', description: 'Speech recognition is not supported in this browser.' });
-            return;
-        }
-
-        if (isListening) {
-            recognitionRef.current.stop();
-        } else {
-            setText(''); // Clear text before starting new recognition
-            setSuggestions([]);
-            recognitionRef.current.start();
-        }
-        setIsListening(!isListening);
-    };
-    
-    const handleSuggest = useCallback(async (inputText = text) => {
-        if (!inputText.trim()) return;
-        setIsSuggesting(true);
-        setSuggestions([]);
-        try {
-            const result = await suggestSymptomsFromText({ 
-                text: inputText,
-                symptomHistory: JSON.stringify(symptomHistory),
-             });
-            setSuggestions(result.suggestions);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'AI Error', description: 'Could not get suggestions.' });
-        } finally {
-            setIsSuggesting(false);
-        }
-    }, [text, toast, symptomHistory]);
-
-    const handleLogSuggestion = useCallback((suggestion: any) => {
-        onLog({
-            name: suggestion.symptomType,
-            severity: suggestion.severity,
-            bodyZone: suggestion.bodyZone,
-        });
-        // Remove the logged suggestion from the list
-        setSuggestions(prev => prev.filter(s => s.symptomType !== suggestion.symptomType));
-    }, [onLog]);
-
-    const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setText(e.target.value);
-    }, []);
-
+    // Disabled AI for now
     return (
-        <Card className="glass-card">
+        <Card className="glass-card opacity-80">
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Lightbulb className="text-primary"/> AI Symptom Helper</CardTitle>
-                <CardDescription>Describe how you feel, and let AI suggest symptoms to log.</CardDescription>
+                <CardTitle className="flex items-center gap-2"><Lightbulb className="text-primary" /> AI Symptom Helper</CardTitle>
+                <CardDescription>AI logging is currently being upgraded.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="relative">
-                    <Textarea 
-                        placeholder="e.g., 'I have a terrible headache and feel really bloated...'"
-                        value={text}
-                        onChange={handleTextChange}
-                        className="bg-background/50 pr-24"
-                        disabled={isSuggesting || isListening}
-                    />
-                    <div className="absolute top-2 right-2 flex flex-col gap-2">
-                         <Button 
-                            size="icon"
-                            variant={isListening ? 'destructive' : 'outline'}
-                            onClick={toggleListening}
-                            disabled={isSuggesting}
-                            aria-label={isListening ? "Stop listening" : "Start listening"}
-                        >
-                           <Mic className={cn(isListening && "animate-pulse")}/>
-                        </Button>
-                        <Button 
-                            size="icon" 
-                            onClick={() => handleSuggest()}
-                            disabled={isSuggesting || !text.trim()}
-                            aria-label="Get AI suggestions"
-                        >
-                           {isSuggesting ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                        </Button>
-                    </div>
-                </div>
-                 {suggestions.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                        <p className="text-sm w-full text-muted-foreground">Tap to log:</p>
-                        {suggestions.map((s, i) => (
-                             <m.div key={i} initial={{opacity: 0, y: 10}} animate={{opacity: 1, y: 0}} transition={{delay: i * 0.1}}>
-                                <Badge 
-                                    className="cursor-pointer text-base py-1 px-3"
-                                    onClick={() => handleLogSuggestion(s)}
-                                >
-                                    {s.symptomType}
-                                </Badge>
-                             </m.div>
-                        ))}
-                    </div>
-                )}
+            <CardContent>
+                <Badge variant="outline">Coming Soon</Badge>
             </CardContent>
         </Card>
-    );
+    )
 }
 
 export default function SymptomLogPage() {
     const [date, setDate] = useState<Date | undefined>(undefined);
-    const { user } = useUser();
-    const firestore = useFirestore();
+    const { data: session } = useSession();
+    const user = session?.user;
     const { toast } = useToast();
 
     useEffect(() => {
-        // Set date on client-side to avoid hydration mismatch
         setDate(new Date());
     }, []);
 
-    const symptomsQuery = useMemoFirebase(() => {
-        if (!user || !date || !firestore) return null;
-        const start = startOfDay(date);
-        const end = endOfDay(date);
-        return query(
-            collection(firestore, 'users', user.uid, 'symptomLogs'),
-            where('timestamp', '>=', Timestamp.fromDate(start)),
-            where('timestamp', '<=', Timestamp.fromDate(end))
-        );
-    }, [user, date, firestore]);
-    
-    const { data: symptoms, isLoading } = useCollection(symptomsQuery);
+    const dateStr = date ? format(date, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
 
-    const symptomHistoryQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        const sevenDaysAgo = subDays(new Date(), 7);
-        return query(
-            collection(firestore, 'users', user.uid, 'symptomLogs'),
-            where('timestamp', '>=', Timestamp.fromDate(sevenDaysAgo)),
-            orderBy('timestamp', 'desc')
-        );
-    }, [user, firestore]);
+    // Fetch symptoms for the selected date
+    const { data: symptomsData, isLoading, mutate: mutateSymptoms } = useSWR(
+        user ? `/api/symptoms?date=${dateStr}` : null,
+        fetcher
+    );
+    const symptoms = symptomsData?.data || [];
 
-    const { data: symptomHistory } = useCollection(symptomHistoryQuery);
-    
+    // Fetch history (last 7 days) if needed, reused endpoint or filter
+    const { data: historyData } = useSWR(
+        user ? `/api/symptoms?limit=20` : null,
+        fetcher
+    );
+    const symptomHistory = historyData?.data || [];
+
+
     const handleLogSymptom = useCallback(async (symptomData: any) => {
-        if (!user || !firestore) {
+        if (!user) {
             toast({
                 variant: 'destructive',
                 title: 'Not logged in',
@@ -385,45 +246,57 @@ export default function SymptomLogPage() {
             return;
         }
 
-        const collectionRef = collection(firestore, 'users', user.uid, 'symptomLogs');
         try {
-            await addDocumentNonBlocking(collectionRef, {
-                symptomType: symptomData.name,
-                severity: symptomData.severity,
-                bodyZone: symptomData.bodyZone,
-                userId: user.uid,
-                timestamp: date || new Date(),
+            const res = await fetch('/api/symptoms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symptomType: symptomData.name,
+                    severity: symptomData.severity,
+                    bodyZone: symptomData.bodyZone,
+                    date: date ? date.toISOString() : new Date().toISOString(),
+                })
             });
+
+            if (!res.ok) throw new Error("Failed to log");
+
             toast({
                 title: 'Symptom Logged!',
                 description: `${symptomData.name} has been added to your log.`,
             });
+            mutateSymptoms(); // Refresh data
         } catch (error) {
-             toast({
+            toast({
                 variant: 'destructive',
                 title: 'Error',
                 description: `Could not log symptom. Please try again.`
             });
         }
-    }, [user, firestore, toast, date]);
-    
+    }, [user, date, toast, mutateSymptoms]);
+
     const handleDeleteSymptom = useCallback(async (symptomId: string) => {
-        if (!user || !firestore) return;
-        const docRef = doc(firestore, 'users', user.uid, 'symptomLogs', symptomId);
+        if (!user) return;
+
+        // Optimistic update could go here
         try {
-            await deleteDocumentNonBlocking(docRef);
+            const res = await fetch(`/api/symptoms?id=${symptomId}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) throw new Error("Failed to delete");
+
             toast({
                 title: 'Symptom Removed',
                 description: 'The symptom has been removed from your log.',
             });
-        } catch(error) {
+            mutateSymptoms();
+        } catch (error) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
                 description: `Could not remove symptom. Please try again.`
             });
         }
-    }, [user, firestore, toast]);
+    }, [user, toast, mutateSymptoms]);
 
     const handleDateChange = useCallback((newDate: Date | undefined) => {
         setDate(newDate);
@@ -438,13 +311,13 @@ export default function SymptomLogPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <main className="lg:col-span-2">
-                    <SymptomConstellation symptoms={symptoms || []} />
+                    <SymptomConstellation symptoms={symptoms} />
                 </main>
 
                 <aside className="space-y-6">
-                    <AISymptomLogger onLog={handleLogSymptom} symptomHistory={symptomHistory || []} />
+                    <AISymptomLogger onLog={handleLogSymptom} symptomHistory={symptomHistory} />
                     <SymptomQuickLog onLog={handleLogSymptom} />
-                    <SymptomTimeline symptoms={symptoms || []} isLoading={isLoading} onDelete={handleDeleteSymptom} />
+                    <SymptomTimeline symptoms={symptoms} isLoading={isLoading} onDelete={handleDeleteSymptom} />
                 </aside>
             </div>
         </div>

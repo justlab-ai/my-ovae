@@ -11,8 +11,8 @@
  * - `AnalyzeMealPhotoOutput`: The output type, containing the score, recommendations, macros, and ingredient analysis.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 import { getHealthSummaryForUser } from './tools/get-health-summary';
 
 const AnalyzeMealPhotoInputSchema = z.object({
@@ -28,10 +28,10 @@ export type AnalyzeMealPhotoInput = z.infer<typeof AnalyzeMealPhotoInputSchema>;
 
 
 const IngredientAnalysisSchema = z.object({
-    name: z.string().describe("The name of the identified ingredient."),
-    verdict: z.enum(["Good", "Okay", "Avoid"]).describe("A verdict on how PCOS-friendly the ingredient is."),
-    reason: z.string().describe("A brief reason for the verdict, explaining its impact on PCOS."),
-    suggestedSwap: z.string().optional().describe("If the verdict is 'Avoid', suggest a simple, healthy swap (e.g., 'Try cauliflower rice').")
+  name: z.string().describe("The name of the identified ingredient."),
+  verdict: z.enum(["Good", "Okay", "Avoid"]).describe("A verdict on how PCOS-friendly the ingredient is."),
+  reason: z.string().describe("A brief reason for the verdict, explaining its impact on PCOS."),
+  suggestedSwap: z.string().optional().describe("If the verdict is 'Avoid', suggest a simple, healthy swap (e.g., 'Try cauliflower rice').")
 });
 
 const AnalyzeMealPhotoOutputSchema = z.object({
@@ -42,9 +42,9 @@ const AnalyzeMealPhotoOutputSchema = z.object({
     ),
   scoreConfidence: z.number().describe("The confidence interval for the main score, e.g., a value of 5 means the score is ±5 points."),
   subScores: z.object({
-      glycemicImpact: z.number().describe("A score (0-100) for the meal's likely impact on blood sugar."),
-      inflammationScore: z.number().describe("A score (0-100) indicating the meal's inflammatory or anti-inflammatory potential."),
-      hormoneBalance: z.number().describe("A score (0-100) for how well the meal supports hormonal balance."),
+    glycemicImpact: z.number().describe("A score (0-100) for the meal's likely impact on blood sugar."),
+    inflammationScore: z.number().describe("A score (0-100) indicating the meal's inflammatory or anti-inflammatory potential."),
+    hormoneBalance: z.number().describe("A score (0-100) for how well the meal supports hormonal balance."),
   }).describe("A breakdown of the score into key PCOS-related categories."),
   dietaryRecommendations: z
     .string()
@@ -70,8 +70,8 @@ export async function analyzeMealPhoto(
 const analyzeMealPhotoPrompt = ai.definePrompt({
   name: 'analyzeMealPhotoPrompt',
   tools: [getHealthSummaryForUser],
-  input: {schema: AnalyzeMealPhotoInputSchema},
-  output: {schema: AnalyzeMealPhotoOutputSchema},
+  input: { schema: AnalyzeMealPhotoInputSchema },
+  output: { schema: AnalyzeMealPhotoOutputSchema },
   prompt: `You are a registered dietitian specializing in PCOS (Polycystic Ovary Syndrome) and insulin resistance.
 
 You will analyze a meal and provide a comprehensive breakdown. First, use the 'getHealthSummaryForUser' tool to understand the user's current context (cycle phase, recent symptoms, etc.). This context is critical. Then, analyze the meal itself.
@@ -110,10 +110,15 @@ const analyzeMealPhotoFlow = ai.defineFlow(
     outputSchema: AnalyzeMealPhotoOutputSchema,
   },
   async input => {
-    // Make sure to pass the userId to the prompt so it can be used by the tool.
-    const {output} = await analyzeMealPhotoPrompt(input, {
-      
-    });
-    return output!;
+    console.log('[analyzeMealPhotoFlow] Starting analysis for user:', input.userId);
+    try {
+      // Make sure to pass the userId to the prompt so it can be used by the tool.
+      const { output } = await analyzeMealPhotoPrompt(input);
+      console.log('[analyzeMealPhotoFlow] Analysis successful');
+      return output!;
+    } catch (error) {
+      console.error('[analyzeMealPhotoFlow] Error:', error);
+      throw error;
+    }
   }
 );

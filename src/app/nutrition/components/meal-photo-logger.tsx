@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useRef, ChangeEvent, useEffect, useCallback } from 'react';
@@ -11,15 +12,15 @@ import { analyzeMealPhoto } from '@/ai/flows/ai-nutrition-scoring';
 import Image from 'next/image';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import type { AnalysisResult } from '../page';
-import { useUser } from '@/firebase';
+import { useSession } from "next-auth/react";
 
 interface MealPhotoLoggerProps {
-    onAnalysisComplete: (result: AnalysisResult) => void;
-    onAnalysisStart: () => void;
-    onClear: () => void;
-    isLoading: boolean;
-    mealPhoto: string | null;
-    setMealPhoto: (photo: string | null) => void;
+  onAnalysisComplete: (result: AnalysisResult) => void;
+  onAnalysisStart: () => void;
+  onClear: () => void;
+  isLoading: boolean;
+  mealPhoto: string | null;
+  setMealPhoto: (photo: string | null) => void;
 }
 
 export const MealPhotoLogger = ({ onAnalysisComplete, onAnalysisStart, onClear, isLoading, mealPhoto, setMealPhoto }: MealPhotoLoggerProps) => {
@@ -28,7 +29,8 @@ export const MealPhotoLogger = ({ onAnalysisComplete, onAnalysisStart, onClear, 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { user } = useUser();
+  const { data: session } = useSession();
+  const user = session?.user;
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -46,9 +48,9 @@ export const MealPhotoLogger = ({ onAnalysisComplete, onAnalysisStart, onClear, 
       } catch (error) {
         setHasCameraPermission(false);
         toast({
-            variant: "destructive",
-            title: "Camera Access Denied",
-            description: "Please enable camera permissions in your browser settings to use this feature.",
+          variant: "destructive",
+          title: "Camera Access Denied",
+          description: "Please enable camera permissions in your browser settings to use this feature.",
         });
       }
     };
@@ -57,13 +59,13 @@ export const MealPhotoLogger = ({ onAnalysisComplete, onAnalysisStart, onClear, 
   }, [toast]);
 
   const analyzePhoto = useCallback(async (dataUrl: string) => {
-    if (!user) {
-        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
-        return;
+    if (!user || !user.id) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
+      return;
     }
     onAnalysisStart();
     try {
-      const result = await analyzeMealPhoto({ userId: user.uid, photoDataUri: dataUrl });
+      const result = await analyzeMealPhoto({ userId: user.id, photoDataUri: dataUrl });
       onAnalysisComplete(result);
     } catch (error) {
       toast({
@@ -88,12 +90,12 @@ export const MealPhotoLogger = ({ onAnalysisComplete, onAnalysisStart, onClear, 
       }
       const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'];
       if (!acceptedTypes.includes(file.type)) {
-          toast({
-              variant: "destructive",
-              title: "Invalid File Type",
-              description: "Please upload a JPEG, PNG, or WEBP image.",
-          });
-          return;
+        toast({
+          variant: "destructive",
+          title: "Invalid File Type",
+          description: "Please upload a JPEG, PNG, or WEBP image.",
+        });
+        return;
       }
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -118,17 +120,17 @@ export const MealPhotoLogger = ({ onAnalysisComplete, onAnalysisStart, onClear, 
       analyzePhoto(dataUrl);
     }
   }, [setMealPhoto, analyzePhoto]);
-  
+
   const clearPhoto = useCallback(() => {
-      setMealPhoto(null);
-      onClear();
-       if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+    setMealPhoto(null);
+    onClear();
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }, [setMealPhoto, onClear]);
 
   const handleUploadClick = useCallback(() => {
-      fileInputRef.current?.click()
+    fileInputRef.current?.click()
   }, []);
 
 
@@ -143,17 +145,17 @@ export const MealPhotoLogger = ({ onAnalysisComplete, onAnalysisStart, onClear, 
           <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover rounded-md" autoPlay muted playsInline style={{ display: !mealPhoto && hasCameraPermission ? 'block' : 'none' }} />
           <AnimatePresence mode="wait">
             {isLoading ? (
-                <m.div
-                    key="loading"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex flex-col items-center justify-center gap-4"
-                >
-                    <Loader2 className="size-16 text-primary animate-spin" />
-                    <h3 className="font-bold text-lg text-gradient">Analyzing your meal...</h3>
-                    <p className="text-muted-foreground text-sm max-w-xs">Our AI is working its magic to give you personalized insights.</p>
-                </m.div>
+              <m.div
+                key="loading"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="flex flex-col items-center justify-center gap-4"
+              >
+                <Loader2 className="size-16 text-primary animate-spin" />
+                <h3 className="font-bold text-lg text-gradient">Analyzing your meal...</h3>
+                <p className="text-muted-foreground text-sm max-w-xs">Our AI is working its magic to give you personalized insights.</p>
+              </m.div>
             ) : mealPhoto ? (
               <m.div
                 key="preview"
@@ -162,9 +164,9 @@ export const MealPhotoLogger = ({ onAnalysisComplete, onAnalysisStart, onClear, 
                 exit={{ opacity: 0, scale: 0.8 }}
                 className="relative w-full h-full"
               >
-                <Image src={mealPhoto} alt="Meal preview" fill={true} style={{objectFit:"contain"}} className="rounded-md" />
-                 <Button variant="destructive" size="icon" className="absolute top-2 right-2 rounded-full z-10" onClick={clearPhoto}>
-                    <X className="size-4" />
+                <Image src={mealPhoto} alt="Meal preview" fill={true} style={{ objectFit: "contain" }} className="rounded-md" />
+                <Button variant="destructive" size="icon" className="absolute top-2 right-2 rounded-full z-10" onClick={clearPhoto}>
+                  <X className="size-4" />
                 </Button>
               </m.div>
             ) : (
@@ -176,14 +178,14 @@ export const MealPhotoLogger = ({ onAnalysisComplete, onAnalysisStart, onClear, 
                 className="flex flex-col items-center justify-center gap-4 w-full h-full"
               >
                 {hasCameraPermission === false && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background/80">
-                        <Alert variant="destructive" className="w-auto">
-                            <AlertTitle>Camera Access Required</AlertTitle>
-                            <AlertDescription>
-                                Please allow camera access to use this feature.
-                            </AlertDescription>
-                        </Alert>
-                    </div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-background/80">
+                    <Alert variant="destructive" className="w-auto">
+                      <AlertTitle>Camera Access Required</AlertTitle>
+                      <AlertDescription>
+                        Please allow camera access to use this feature.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
                 )}
                 <div className="absolute bottom-8 flex gap-4 mt-4">
                   <Button className="animate-biopulse-resting h-12 text-base px-6" onClick={takePicture} disabled={!hasCameraPermission}>

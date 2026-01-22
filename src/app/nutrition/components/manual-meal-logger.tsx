@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -11,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { analyzeMealPhoto } from '@/ai/flows/ai-nutrition-scoring';
 import type { AnalysisResult } from '../page';
-import { useUser } from '@/firebase';
+import { useSession } from "next-auth/react";
 
 interface ManualMealLoggerProps {
     onAnalysisComplete: (result: AnalysisResult, mealDetails: any) => void;
@@ -24,7 +25,8 @@ export const ManualMealLogger = ({ onAnalysisComplete, onAnalysisStart, isLoadin
     const [mealName, setMealName] = useState('');
     const [foodItems, setFoodItems] = useState('');
     const { toast } = useToast();
-    const { user } = useUser();
+    const { data: session } = useSession();
+    const user = session?.user;
 
     const handleManualAnalysis = useCallback(async () => {
         if (!mealName || !foodItems) {
@@ -35,7 +37,7 @@ export const ManualMealLogger = ({ onAnalysisComplete, onAnalysisStart, isLoadin
             });
             return;
         }
-        if (!user) {
+        if (!user || !user.id) {
             toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
             return;
         }
@@ -44,9 +46,9 @@ export const ManualMealLogger = ({ onAnalysisComplete, onAnalysisStart, isLoadin
             // The multimodal model can analyze text even with a placeholder image.
             // We pass the description in the prompt, now with added context.
             const analysisPrompt = `Analyze the following ${mealName} meal: ${foodItems}`;
-            
-            const result = await analyzeMealPhoto({ 
-                userId: user.uid,
+
+            const result = await analyzeMealPhoto({
+                userId: user.id,
                 prompt: analysisPrompt,
                 photoDataUri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
             });
@@ -88,7 +90,7 @@ export const ManualMealLogger = ({ onAnalysisComplete, onAnalysisStart, isLoadin
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="food-items">Food Items</Label>
-                    <Textarea 
+                    <Textarea
                         id="food-items"
                         placeholder="e.g., Grilled chicken breast, quinoa, steamed broccoli..."
                         value={foodItems}

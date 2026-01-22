@@ -1,0 +1,283 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String   @id @default(uuid())
+  email               String   @unique
+  displayName         String?
+  photoURL            String?
+  createdAt           DateTime @default(now())
+  lastLogin           DateTime?
+  onboardingCompleted Boolean  @default(false)
+  themePreference     String?
+
+  // Auth Fields
+  password            String?
+  emailVerified       DateTime?
+  image               String?
+  accounts            Account[]
+  sessions            Session[]
+  
+  // JSON fields for complex objects
+  availableEquipment  String[] // Postgres supports arrays
+  dockPreferences     Json?
+  onboarding          Json?
+  emergencyContact    Json?
+  
+  // Health Data
+  pcosJourneyProgress Int?
+  healthScore         Float?
+  dob                 DateTime?
+  journeyStartDate    DateTime?
+  wellnessGoal        String?
+  
+  conversationHistory Json? // Storing history as JSON
+
+  // Relations
+  symptomLogs       SymptomLog[]
+  cycles           Cycle[]
+  cycleLogs        CycleLog[] // Denormalized access if needed
+  moodLogs         MoodLog[]
+  dailyCheckIns    DailyCheckIn[]
+  nutritionLogs    NutritionLog[]
+  fitnessActivities FitnessActivity[]
+  communityPosts   CommunityPost[]
+  subscription     Subscription?
+  healthcareProviders HealthcareProvider[]
+  labResults       LabResult[]
+  predictionLogs   PredictionLog[]
+  subtypeAnalyses  PcosSubtypeAnalysisLog[]
+  workoutEffectivenessLogs WorkoutEffectivenessLog[]
+  cyclePredictions CyclePredictionLog[]
+}
+
+model SymptomLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  symptomType String
+  severity    Float // 1-5
+  timestamp   DateTime @default(now())
+  notes       String?
+  bodyZone    String?
+  cycleDay    Int?
+  mood        String?
+  energyLevel Float? // 1-10
+}
+
+model Cycle {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  startDate DateTime
+  endDate   DateTime?
+  length    Int?
+  notes     String?
+  
+  logs      CycleLog[]
+}
+
+model CycleLog {
+  id      String   @id @default(uuid())
+  cycleId String
+  cycle   Cycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  
+  userId  String   // Denormalized for query ease
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date    DateTime
+  flow    String // Can use basics for now, convert to Enum later if strict
+}
+
+model MoodLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  mood      String
+  intensity Float // 1-5
+  loggedAt  DateTime @default(now())
+  notes     String?
+}
+
+model DailyCheckIn {
+  id          String   @id // Manual ID (YYYY-MM-DD)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date        DateTime
+  mood        Float    // 1-5
+  energyLevel Float    // 1-5
+  
+  @@unique([userId, date]) // Ensure one check-in per day per user
+}
+
+model NutritionLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  mealName  String
+  foodItems String
+  loggedAt  DateTime @default(now())
+  photoURL  String?
+  pcosScore Float?
+}
+
+model FitnessActivity {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  activityType   String
+  duration       Float
+  caloriesBurned Float?
+  completedAt    DateTime @default(now())
+  intensity      Float?
+  cyclePhase     String?
+  
+  energyLevel    Json? // { before: number, after: number }
+  notes          String?
+  effectiveness  Json? // { score, feedback, effortLevel }
+}
+
+model CommunityPost {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  category  String
+  title     String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  planType  String
+  startDate DateTime
+  endDate   DateTime?
+  autoRenew Boolean  @default(true)
+}
+
+model HealthcareProvider {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  providerName     String
+  specialty        String?
+  clinic           String?
+  email            String?
+  sharePermissions Json? // { symptoms: boolean, ... }
+  connectionDate   DateTime @default(now())
+  sharingToken     String?
+  sharingExpiresAt DateTime?
+}
+
+model LabResult {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  testDate  DateTime
+  testType  String
+  results   Json // Array of objects
+  provider  String?
+}
+
+// AI Logs for Future Training/Tracking
+model PredictionLog {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  predictionDate   DateTime @default(now())
+  targetSymptom    String
+  forecast         Json     // Array of predictions
+  wasSymptomLogged Boolean?
+}
+
+model PcosSubtypeAnalysisLog {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  analysisDate    DateTime @default(now())
+  confidenceScore Float
+  phenotypeScores Json     // { insulinResistance: number, ... }
+}
+
+model WorkoutEffectivenessLog {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  
+  activityId         String
+  // Relation to activity if needed, or loose coupling
+  
+  analysisDate       DateTime @default(now())
+  effectivenessScore Float
+  feedback           String?
+  userEffortLevel    Float?
+}
+
+model CyclePredictionLog {
+  id                       String   @id @default(uuid())
+  userId                   String
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  predictionDate           DateTime @default(now())
+  confidenceScore          Float
+  reasoning                String?
+  predictedPeriodStartDate DateTime
+}
+
+// NextAuth Models
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

@@ -1,8 +1,9 @@
 
 'use client';
 
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import { Toaster } from "@/components/ui/toaster"
+import { SessionProvider } from "next-auth/react"
 import './globals.css';
 import { MotionProvider } from '@/components/motion-provider';
 import React from 'react';
@@ -40,20 +41,22 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={`${inter.variable} ${poppins.variable} ${playfair.variable} ${jetbrains.variable} font-body antialiased`}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
-            themes={['dark', 'light']}
-          >
-              <MotionProvider>
-                <GlobalNav>
-                    {children}
-                </GlobalNav>
-              </MotionProvider>
-          </ThemeProvider>
-          <Toaster />
-          <CookieConsent />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          themes={['dark', 'light']}
+        >
+          <SessionProvider>
+            <MotionProvider>
+              <GlobalNav>
+                {children}
+              </GlobalNav>
+            </MotionProvider>
+          </SessionProvider>
+        </ThemeProvider>
+        <Toaster />
+        <CookieConsent />
       </body>
     </html>
   );
